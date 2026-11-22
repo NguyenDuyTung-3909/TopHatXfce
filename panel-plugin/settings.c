@@ -3,7 +3,7 @@
 
 #include "utils.h"      // M_COUNT, M_U8, M_MAX
 #include "collector.h"
-#include "graphinator.h"
+#include "tophatxfce.h"
 
 #include <stdlib.h>     // NULL, calloc
 #include <string.h>     // strncat

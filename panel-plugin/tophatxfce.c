@@ -3,7 +3,7 @@
 #include <gtk/gtk.h>
 
 // custom
-#include "graphinator.h"
+#include "tophatxfce.h"
 #include "info_cpu.h"
 #include "info_mem.h"
 #include "data.h"

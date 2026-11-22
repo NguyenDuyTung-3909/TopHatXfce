@@ -4,7 +4,7 @@
 #define __DEFAULTS_H__
 
 // custom
-#include "graphinator.h"
+#include "tophatxfce.h"
 
 
 extern section_t default_sections[];

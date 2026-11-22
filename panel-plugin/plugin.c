@@ -2,7 +2,7 @@
 #include "plugin.h"
 
 #include "defaults.h"
-#include "graphinator.h"    // plugin_construct_in_container, panel_t
+#include "tophatxfce.h"    // plugin_construct_in_container, panel_t
 #include "settings.h"       // settings_construct
 #include "utils.h"
 

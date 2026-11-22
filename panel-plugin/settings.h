@@ -4,7 +4,7 @@
 #define __SETTINGS_H__
 
 // custom
-#include "graphinator.h"
+#include "tophatxfce.h"
 #include "panel_entry.h"
 
 // gtk, xfce
