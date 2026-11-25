@@ -6,6 +6,7 @@
 
 #include "drawing.h"
 #include "collector.h"
+#include "data.h"
 
 #include <stddef.h>     // size_t
 
@@ -13,6 +14,9 @@
 
 
 #define LABEL_MAX_LEN 256
+
+// number of samples kept for the history graph in the detail popup
+#define HISTORY_LEN   160
 
 
 typedef struct
@@ -37,8 +41,13 @@ typedef struct
 {
     section_t* section;
 
+    GtkWidget* box;             // event box, receives the clicks
+    GtkWidget* inner;           // holds label + draw_area
     GtkWidget* draw_area;
-    GtkWidget* label;
+    GtkWidget* label;           // NULL if the label is disabled
+
+    GtkWidget* popover;         // NULL unless the detail popup is open
+    data_t hist;                // last HISTORY_LEN samples, kept for the popup
 
     unsigned timer;
 
@@ -67,6 +76,7 @@ void section_replace( section_t* section, section_t* other );
 void entry_refresh( panel_entry_t* entry );
 void entry_set_interval( panel_entry_t* entry, int new_ms );
 void entry_refresh_label( panel_entry_t* entry );
+void entry_reset_history( panel_entry_t* entry );
 
 void entries_init( entries_t* entries, size_t reserved, GtkBox* box );
 void entries_free( entries_t* entries );
@@ -74,5 +84,6 @@ void entries_add( entries_t* entries, section_t* sec );
 void entries_reset( entries_t* entries, size_t count );
 
 void entries_refresh_all( entries_t* entries );
+void entries_set_orientation( entries_t* entries, GtkOrientation orient );
 
 #endif // __PANEL_ENTRY_H__

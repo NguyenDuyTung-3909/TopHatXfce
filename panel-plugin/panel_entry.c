@@ -2,6 +2,7 @@
 #include "panel_entry.h"
 
 #include "drawing.h"    // graph_cols
+#include "popup.h"      // popup_toggle
 
 #include <string.h>     // strlen
 #include <stdlib.h>     // calloc, realloc, free
@@ -12,6 +13,8 @@
 
 static gboolean collector( gpointer ptr );
 static void redraw( GtkWidget* widget, cairo_t* cr, section_t* sec );
+static gboolean on_press( GtkWidget* widget, GdkEventButton* ev,
+                          panel_entry_t* entry );
 
 
 void section_init( section_t* sec )
@@ -71,6 +74,13 @@ void entry_refresh_label( panel_entry_t* ent )
 }
 
 
+void entry_reset_history( panel_entry_t* entry )
+{
+    data_free( &entry->hist );
+    data_init( &entry->hist, HISTORY_LEN );
+}
+
+
 void entry_set_interval( panel_entry_t* entry, int new_ms )
 {
     // remove old timer
@@ -95,6 +105,10 @@ void entries_free( entries_t* entries )
 {
     for ( size_t i = 0; i < entries->count; ++i )
     {
+        if ( entries->ptr[ i ].timer )
+            g_source_remove( entries->ptr[ i ].timer );
+
+        data_free( &entries->ptr[ i ].hist );
         section_free( entries->ptr[ i ].section );
 
         g_free( entries->ptr[ i ].label_markup_fmt );
@@ -110,7 +124,22 @@ static void construct_entry( panel_entry_t* entry, GtkBox* box, section_t* sec )
 {
     // TODO: add checks if sec is consistent
 
+    // clickable wrapper around label + graph
+    entry->box = gtk_event_box_new();
+    gtk_event_box_set_visible_window( GTK_EVENT_BOX( entry->box ), FALSE );
+    gtk_widget_add_events( entry->box, GDK_BUTTON_PRESS_MASK );
+    gtk_widget_show( entry->box );
+    gtk_box_pack_start( box, entry->box, FALSE, FALSE, 0 );
+    g_signal_connect( G_OBJECT( entry->box ), "button-press-event",
+                                              G_CALLBACK( on_press ), entry );
+
+    entry->inner = gtk_box_new( gtk_orientable_get_orientation(
+                                    GTK_ORIENTABLE( box ) ), 2 );
+    gtk_widget_show( entry->inner );
+    gtk_container_add( GTK_CONTAINER( entry->box ), entry->inner );
+
     // add label
+    entry->label = NULL;
     if ( sec->label_enabled )
     {
         entry->label = gtk_label_new( "" );
@@ -118,7 +147,8 @@ static void construct_entry( panel_entry_t* entry, GtkBox* box, section_t* sec )
         gtk_label_set_justify( GTK_LABEL( entry->label ), GTK_JUSTIFY_RIGHT );
         gtk_widget_set_margin_end( entry->label, 5 );
         gtk_widget_set_margin_start( entry->label, 10 );
-        gtk_box_pack_start( box, entry->label, FALSE, FALSE, 0 );
+        gtk_box_pack_start( GTK_BOX( entry->inner ), entry->label,
+                            FALSE, FALSE, 0 );
 
         entry_refresh_label( entry );
     }
@@ -132,7 +162,8 @@ static void construct_entry( panel_entry_t* entry, GtkBox* box, section_t* sec )
     gtk_widget_set_size_request( entry->draw_area, sec->graph.w, sec->graph.h );
     gtk_widget_show( entry->draw_area );
     gtk_widget_set_valign( entry->draw_area, GTK_ALIGN_CENTER );
-    gtk_box_pack_start( box, entry->draw_area, FALSE, FALSE, 0 );
+    gtk_box_pack_start( GTK_BOX( entry->inner ), entry->draw_area,
+                        FALSE, FALSE, 0 );
     g_signal_connect( G_OBJECT( entry->draw_area ), "draw",
                                                     G_CALLBACK( redraw ), sec );
 }
@@ -156,6 +187,8 @@ void entries_add( entries_t* entries, section_t* sec )
     panel_entry_t* entry = &entries->ptr[ entries->count ];
     ++entries->count;
 
+    data_init( &entry->hist, HISTORY_LEN );
+
     construct_entry( entry, entries->box, sec );
 }
 
@@ -165,12 +198,29 @@ void entries_refresh_all( entries_t* entries )
     for ( size_t i = 0; i < entries->count; ++i )
     {
         g_source_remove( entries->ptr[ i ].timer );
-        gtk_widget_destroy( entries->ptr[ i ].draw_area );
-        gtk_widget_destroy( entries->ptr[ i ].label );
+
+        if ( entries->ptr[ i ].popover )
+            gtk_widget_destroy( entries->ptr[ i ].popover );
+
+        // destroys the label and the draw area too
+        gtk_widget_destroy( entries->ptr[ i ].box );
+        entries->ptr[ i ].box = NULL;
+        entries->ptr[ i ].inner = NULL;
+        entries->ptr[ i ].draw_area = NULL;
+        entries->ptr[ i ].label = NULL;
 
         construct_entry( entries->ptr + i, entries->box,
                          entries->ptr[ i ].section );
     }
+}
+
+
+void entries_set_orientation( entries_t* entries, GtkOrientation orient )
+{
+    for ( size_t i = 0; i < entries->count; ++i )
+        if ( entries->ptr[ i ].inner )
+            gtk_orientable_set_orientation(
+                GTK_ORIENTABLE( entries->ptr[ i ].inner ), orient );
 }
 
 
@@ -199,6 +249,7 @@ static gboolean collector( gpointer ptr )
     ent->section->graph.max_value = ent->section->collector.max_value;
 
     data_push( &ent->section->graph.data, val );
+    data_push( &ent->hist, val < 0 ? 0 : val );
 
     gtk_widget_queue_draw_area( ent->draw_area, 0, 0, ent->section->graph.w,
                                                       ent->section->graph.h );
@@ -214,4 +265,19 @@ static gboolean collector( gpointer ptr )
 static void redraw( GtkWidget* widget, cairo_t* cr, section_t* sec )
 {
     sec->draw_func( widget, cr, &sec->graph );
+}
+
+
+static gboolean on_press( GtkWidget* widget, GdkEventButton* ev,
+                          panel_entry_t* entry )
+{
+    (void) widget;
+
+    // primary button only; let the panel handle everything else
+    // (right click -> plugin menu)
+    if ( ev->button != 1 || ev->type != GDK_BUTTON_PRESS )
+        return FALSE;
+
+    popup_toggle( entry );
+    return TRUE;
 }

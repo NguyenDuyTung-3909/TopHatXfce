@@ -1,8 +1,8 @@
 [Xfce Panel]
 Type=X-XFCE-PanelPlugin
 Encoding=UTF-8
-Name=Top XFCE
-Comment=Create graphs from periodic monitoring
+Name=TopHat-Xfce4
+Comment=Monitor CPU RAM TEMP
 Icon=tophatxfce
 X-XFCE-Module=tophatxfce
 X-XFCE-Internal=false

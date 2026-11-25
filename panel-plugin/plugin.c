@@ -2,7 +2,7 @@
 #include "plugin.h"
 
 #include "defaults.h"
-#include "tophatxfce.h"    // plugin_construct_in_container, panel_t
+#include "tophatxfce.h"     // plugin_construct_in_container, panel_t
 #include "settings.h"       // settings_construct
 #include "utils.h"
 
@@ -51,6 +51,7 @@ static void orientation_changed( XfcePanelPlugin* plugin,
     (void) plugin;
 
     gtk_orientable_set_orientation( GTK_ORIENTABLE( pan->wrap ), orientation );
+    entries_set_orientation( &pan->entries, orientation );
     // for ( size_t i = 0; i < pan->entries.count; ++i )
     // {
     //     gtk_orientable_set_orientation( GTK_ORIENTABLE(

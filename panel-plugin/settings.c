@@ -374,6 +374,7 @@ void set_monitor( GtkComboBox* self, page_t* ptr )
 
     collector_t col = *MONITORS_COL[ active ];
     collector_reset( &ptr->entry->section->collector, &col );
+    entry_reset_history( ptr->entry );
 }
 
 
